@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Leave Data</title>
+  <style>
+    *{
+        font-size: 13px;
+        padding: 0;
+        margin: 0;
+        box-sizing: border-box;
+    }
+
+    body{
+        background-color: #8BC6EC;
+        background-image: linear-gradient(135deg, #8BC6EC 0%, #9599E2 100%);
+    }
+
+    #ABCD{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+    
+    .maindiv{
+        text-align: center;
+        background-color: #8BC6EC;
+    }
+
+    .maindiv td{
+        padding-left: 1px;
+        padding-right: 2px;
+    }
+
+    .maindiv h2{
+        font-size: 30px;
+        margin-bottom: 15px;
+        margin-top: 10px;
+    }
+
+    .maindiv select{
+        width: 250px;
+        height: 25px;
+        margin-bottom: 10px;
+        background-color: transparent;
+        border-radius: 10px;
+        border-color: white;
+        padding-left: 10px;
+    }
+
+    .maindiv #search{
+        width: 70px;
+        height: 25px;
+        background-color: rgb(58, 169, 58);
+        color: white;
+        border-radius: 10px;
+        border: none;
+        margin-left: 10px;
+        margin-bottom: 10px;
+    }
+
+    .maindiv button:hover{
+        cursor: pointer;
+        background-color: green;
+    }
+
+    .maindiv button:active{
+        transform: scale(0.9);
+    }
+
+    #ABCD .cancel{
+        width: 60px;
+        height: 20px;
+        background-color: red;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        margin-top: 5px;
+        margin-bottom: 5px;
+        font-size: 13px;
+    }
+
+    #ABCD .cancel:hover{
+        cursor: pointer;
+        background-color: rgb(241, 104, 104);
+    }
+
+    #ABCD .cancel:active{
+        background-color: black; 
+        transform: scale(0.9);
+    }
+
+    #ABCD .print{
+        width: 60px;
+        height: 20px;
+        background-color: green;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        margin-top: 5px;
+        font-size: 13px;
+    }
+
+    #ABCD .print:hover{
+        cursor: pointer;
+        background-color: rgb(58, 169, 58);
+    }
+  </style>
+</head>
+<body>
+    <div class="maindiv">
+        <h2>Employee Leave Application Data</h2>
+            <select id="name-select" name="name" required>
+                <option value="">Data Loading...</option>
+            </select>
+        <button onclick="searchData()" id="search">Search</button>
+        <div id="output"></div>
+    </div>
+
+  <script>
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbzNKeZ6eabOoE0-c5JTdeRivixWuxqRew_qrYukPjjswUoJ9u0pHy8H6Knc3SNCAarPEg/exec?action=fetchSheet1';
+    let allData = []; // Store all fetched data
+
+    async function fetchData() {
+      try {
+        let response = await fetch(scriptUrl);
+        let data = await response.json();
+        allData = data; // Store all data globally
+      } catch (error) {
+        document.getElementById("output").innerHTML = "Error fetching data!";
+      }
+    }
+
+function displayData(data) {
+    if (data.length === 1) { // Only headers present, no records
+        document.getElementById("output").innerHTML = "No records found.";
+        return;
+    }
+
+    let table = "<table border='1'><tr>";
+    data[0].forEach(header => table += `<th>${header}</th>`);
+    table += "<th>Actions</th></tr>"; // Add column for buttons
+
+    for (let i = 1; i < data.length; i++) {
+        table += "<tr>";
+        data[i].forEach((cell, colIndex) => {
+            if ([3, 8, 9].includes(colIndex)) { // Columns 4, 9, 10 (0-based index)
+                table += `<td>${formatDate(cell)}</td>`;
+            } else if (colIndex === 1) { // Column 2 (0-based index)
+                table += `<td>${formatDateTime(cell)}</td>`;
+            } else {
+                table += `<td>${cell}</td>`;
+            }
+        });
+
+        let firstColValue = data[i][0];
+        let lastColValue = data[i][data[i].length - 1]; // Get last column value
+        let isCanceled = lastColValue.toLowerCase() === "canceled"; // Check if it's "Canceled"
+
+        table += "<td id='ABCD'>";
+        if (!isCanceled) { // Show buttons only if not canceled
+            table += `<button onclick='printRow(${JSON.stringify(data[i])})' class='print'>Print</button>`;
+            table += `<button onclick='cancelRow("${firstColValue}")' class='cancel'>Cancel</button>`;
+        }
+        table += "</td>";
+
+        table += "</tr>";
+    }
+    table += "</table>";
+
+    document.getElementById("output").innerHTML = table;
+}
+
+// Function to format date to DD/MM/YYYY
+function formatDate(dateString) {
+    if (!dateString) return ""; // Handle empty cases
+
+    let date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString; // Return original if invalid date
+
+    let day = String(date.getDate()).padStart(2, "0");
+    let month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+    let year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+}
+
+// Function to format date and time to DD/MM/YYYY HH:MM:SS
+function formatDateTime(dateString) {
+    if (!dateString) return ""; // Handle empty cases
+
+    let date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString; // Return original if invalid date
+
+    let day = String(date.getDate()).padStart(2, "0");
+    let month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+    let year = date.getFullYear();
+    let hours = String(date.getHours()).padStart(2, "0");
+    let minutes = String(date.getMinutes()).padStart(2, "0");
+    let seconds = String(date.getSeconds()).padStart(2, "0");
+
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return ""; // Handle empty cases
+
+    let date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString; // Return original if invalid date
+
+    let day = String(date.getDate()).padStart(2, "0");
+    let month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+    let year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+}
+
+    
+    function searchData() {
+        let searchQuery = document.getElementById("name-select").value; // Get selected name
+        let currentYear = new Date().getFullYear(); // Get the current year
+
+        if (searchQuery === "") {
+            document.getElementById("output").innerHTML = ""; // Show no data if search is blank
+            return;
+        }
+
+        let filteredData = allData.filter((row, index) => {
+            if (index === 0) return true; // Keep header row
+            
+            let rowYear = new Date(row[3]).getFullYear(); // Extract year from column 4 (assuming date format is valid)
+            return row[4] === searchQuery && rowYear === currentYear; // Match name & current year
+        });
+
+        if (filteredData.length > 1) {
+            displayData(filteredData);
+        } else {
+            document.getElementById("output").innerHTML = "No records found.";
+        }
+    }
+
+    function printRow(rowData) {
+      let voucherWindow = window.open("", "_blank");
+      voucherWindow.document.write(`
+        <html>
+        <head>
+            <title>Print Voucher</title>
+            <style>
+                *{font-family: 'Arial', sans-serif;}
+                .voucherContainer {display: flex; justify-content: center; align-items: center;}
+                .voucher label {font-size: 1rem; font-weight: bold; margin-bottom: 8px; display: block; 
+                    color: black; margin-left: 13.5px;}
+                .signature-row label {margin-left: 0px;}
+                .voucher span {margin-left: 13.5px;}
+                .voucher {background-color: #ffffff;padding: 20px;border-radius: 8px;border: double;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    width: 100%;
+                    max-width: 600px;
+                    margin-top: 20px;}
+                .voucher h2 {color: #4CAF50;font-size: 1.8rem;margin-bottom: 20px;text-align: center;}
+                .voucher div {margin-bottom: 15px;}
+                .signature-row {display: flex;justify-content: space-between;gap: 20px;
+                    text-align: center;
+                    padding-bottom: 0px;}
+                .signature-item {flex: 1;}
+                .signature-box {width: 185px; height: 100px;border: 1px solid black;background-color: #f0f0f0;
+                    margin-top: 5px;
+                    border-radius: 20px;}
+                .print-button {display: block;background-color: #4CAF50;color: white;border: none;
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    font-size: 1.1rem;
+                    cursor: pointer;
+                    font-weight: bold;
+                    margin-top: -15px}
+                .print-button:hover {background-color: #45a049;}
+                @media print {.print-button {display: none;}}
+            </style>
+        </head>
+        <body>
+          <div class="voucherContainer">
+            <div class="voucher">
+                <div style="text-align: center; font-size: 35px; font-weight: bold; border-bottom: 2px solid; padding-bottom: 10px;">
+                    ${rowData[2]} <!-- Company Name -->
+                </div>
+                <h2>Leave Application Voucher</h2>
+                <div><label>Application Date:</label> <span>${formatDate(rowData[3])}</span></div>
+                <div><label>Name:</label> <span>${rowData[4]}</span></div>
+                <div><label>Department:</label> <span>${rowData[5]}</span></div>
+                <div><label>Leave Requested For:</label> <span>${rowData[6]}</span></div>
+                <div><label>Reason For Leave:</label> <span>${rowData[7]}</span></div>
+                <div><label>Start Date:</label> <span>${formatDate(rowData[8])}</span></div>
+                <div><label>End Date:</label> <span>${formatDate(rowData[9])}</span></div>
+                <div><label>Emergency Contact No.:</label> <span>${rowData[10]}</span></div>
+                <div><label>Email ID:</label> <span>${rowData[11]}</span></div>
+                <div class="signature-row">
+                    <div class="signature-item">
+                        <label>Employee Signature:</label>
+                        <div class="signature-box"></div>
+                    </div>
+                    <div class="signature-item">
+                        <label>HOD Signature:</label>
+                        <div class="signature-box"></div>
+                    </div>
+                    <div class="signature-item">
+                        <label>HR Signature:</label>
+                        <div class="signature-box"></div>
+                    </div>
+                </div>
+                <button class="print-button" onclick="window.print()">Print</button>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+      voucherWindow.document.close();
+    }
+
+    async function cancelRow(firstColValue) {
+    let cancelUrl = `https://script.google.com/macros/s/AKfycbzNKeZ6eabOoE0-c5JTdeRivixWuxqRew_qrYukPjjswUoJ9u0pHy8H6Knc3SNCAarPEg/exec?action=cancel&firstColValue=${encodeURIComponent(firstColValue)}`;
+
+    // Create and show the message element
+    let messageBox = document.createElement("div");
+    messageBox.innerText = "Cancelling...";
+    messageBox.style.position = "fixed";
+    messageBox.style.top = "50%";
+    messageBox.style.left = "50%";
+    messageBox.style.transform = "translate(-50%, -50%)";
+    messageBox.style.padding = "10px 20px";
+    messageBox.style.fontSize = "25px";
+    messageBox.style.textAlign = "center";
+    messageBox.style.background = "#333";
+    messageBox.style.color = "#fff";
+    messageBox.style.borderRadius = "5px";
+    messageBox.style.zIndex = "1000";
+    document.body.appendChild(messageBox);
+
+    try {
+        let response = await fetch(cancelUrl);
+        let result = await response.text();
+        messageBox.innerText = result; // Update the message with the actual result
+
+        // Remove the message box after a few seconds
+        setTimeout(() => {
+        document.body.removeChild(messageBox);
+        }, 3000);
+
+        fetchData(); // Refresh data after canceling
+    } catch (error) {
+        messageBox.innerText = "Error canceling row!";
+
+        setTimeout(() => {
+        document.body.removeChild(messageBox);
+        }, 3000);
+    }
+    }
+
+    fetchData();
+
+    /////////////////////////////Geting Name From Sheet/////////////////////////
+
+    let url1 = 'https://script.google.com/macros/s/AKfycbzNKeZ6eabOoE0-c5JTdeRivixWuxqRew_qrYukPjjswUoJ9u0pHy8H6Knc3SNCAarPEg/exec?action=fetchSheet2'
+    fetch(url1)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('name-select');
+            select.innerHTML = ""; // Clear existing options
+
+            // Add a placeholder option
+            const placeholderOption = document.createElement('option');
+            placeholderOption.value = "";
+            placeholderOption.textContent = "Select Employee Name";
+            placeholderOption.disabled = true;
+            placeholderOption.selected = true;
+            select.appendChild(placeholderOption);
+
+            // Check if data exists
+            if (data.values && data.values.length > 0) {
+            data.values.forEach((row, index) => {
+                if (index > 0) { // Skip the header row if present
+                const option = document.createElement('option');
+                option.value = row[0]; // Assuming names are in the first column
+                option.textContent = row[0]; // Display the name in the dropdown
+                select.appendChild(option);
+                }
+            });
+            } else {
+            // If no data found, add a "No data" option
+            const noDataOption = document.createElement('option');
+            noDataOption.value = "";
+            noDataOption.textContent = "No data found";
+            noDataOption.disabled = true;
+            select.appendChild(noDataOption);
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching data:", error);
+            const select = document.getElementById('name-select');
+            select.innerHTML = ""; // Clear existing options
+            const errorOption = document.createElement('option');
+            errorOption.value = "";
+            errorOption.textContent = "Error loading data";
+            errorOption.disabled = true;
+            select.appendChild(errorOption);
+        });
+  </script>
+</body>
+</html>
